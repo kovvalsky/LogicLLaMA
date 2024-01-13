@@ -88,17 +88,18 @@ class DataPreparer:
         self.train_on_inputs = train_on_inputs
         self.cutoff_len = cutoff_len
 
-    def tokenize(self, prompt, add_eos_token=True, eval_mode=False, return_tensors=None, **kwargs):
+    def tokenize(self, prompt_list, add_eos_token=True, eval_mode=False, return_tensors=None, **kwargs):
         
         assert (eval_mode and all_exists(return_tensors)) \
                or ((not eval_mode) and (return_tensors is None)), \
                'either use eval mode with return_tensors or not use it and not return_tensors'
         
         result = self.tokenizer(
-            prompt,
+            prompt_list,
             truncation=True,
             max_length=self.cutoff_len,
-            padding=False,
+            # padding=False,
+            padding=True,
             return_tensors=return_tensors,
         )
         
@@ -121,18 +122,22 @@ class DataPreparer:
     def make_prompts(self, data_point, **kwargs):
         raise NotImplementedError
 
-    def prepare_input(self, data_point, eval_mode=False, return_tensors=None, **kwargs):
+    def prepare_input(self, data_point_list, eval_mode=False, return_tensors=None, **kwargs):
         
         assert (eval_mode and all_exists(return_tensors)) \
                or ((not eval_mode) and (return_tensors is None)), \
                'either use eval mode with return_tensors or not use it and not return_tensors'
-
-        input_prompt, output_prompt = self.make_prompts(data_point, **kwargs)
         
-        full_prompt = input_prompt + output_prompt
+        full_prompt_list = []
+        for data_point in data_point_list:
+            input_prompt, output_prompt = self.make_prompts(data_point, **kwargs)
+            full_prompt = input_prompt + output_prompt
+            full_prompt_list.append(full_prompt)
+            print("data_point=", data_point)
+            print("full prompt=", full_prompt)
         
-        tokenized_full_prompt = self.tokenize(
-            full_prompt, 
+        tokenized_full_prompt_list = self.tokenize(
+            full_prompt_list, 
             eval_mode=eval_mode,
             return_tensors=return_tensors,
             **kwargs
@@ -140,7 +145,7 @@ class DataPreparer:
         
         # for eval mode, input_ids is tensor and we don't need the label modifications
         if eval_mode:
-            return tokenized_full_prompt
+            return tokenized_full_prompt_list
 
         if not self.train_on_inputs:
             tokenized_user_prompt = self.tokenize(input_prompt, add_eos_token=False)
