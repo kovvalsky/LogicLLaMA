@@ -27,6 +27,7 @@ def llama_generate(
         raise ValueError('either give me the prompt_keys or the pre-compiled prepare input func')
 
     inputs = prepare_input(input_str)
+    print(inputs)
     input_ids = inputs['input_ids'].to('cuda')
 
     llama_model.eval()
